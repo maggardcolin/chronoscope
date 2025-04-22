@@ -111,6 +111,7 @@ def collect_benchmark_data_analytical (id,
                                        delays,
                                        result,
                                        attempt_parallelism,
+                                       parallelism_level,
                                        fidelities,
                                        coherence_times):
     """Optimistically performs analytical calculation of design characteristics
@@ -137,7 +138,10 @@ def collect_benchmark_data_analytical (id,
     local_coupling_map = CouplingMap(make_bidirectional(connectivity_map) if force_bi else connectivity_map)
     max_possible_copies = 1
     if attempt_parallelism:
-        max_possible_copies = int(connectivity_map_size/benchmark_qubits) #Truncate decimal
+        if int(parallelism_level) == -1:
+            max_possible_copies = int(connectivity_map_size/benchmark_qubits) #Truncate decimal
+        else:
+            max_possible_copies = parallelism_level
         benchmark = make_parallel_copies(circuit=benchmark, n=max_possible_copies)  #Store parallel-ed version into 
     
     #Transpile to specified connectivity
@@ -162,8 +166,11 @@ def collect_benchmark_data_analytical (id,
     cost = critical_path_analyzer(transpiled_benchmark, num_qubits_transpiled, delays[0], delays[1], delays[2])
     
     #Estimate fidelity based on individual gate errors and execution time
-    avg_1qgate_p_circ = (total_gatecount - cx_count - swap_overhead)/max_possible_copies
-    estimated_average_fidelity = fidelities[0]**avg_1qgate_p_circ * fidelities[1]**((cx_count + swap_overhead*3)/max_possible_copies) * fidelities[2]**(benchmark_qubits) * calculate_idling_error(cost, coherence_times[0], coherence_times[1])
+    oneqgate_p_circ = (total_gatecount - cx_count - swap_overhead)
+    
+    
+    #replace with TVD
+    estimated_average_fidelity = (fidelities[0]**oneqgate_p_circ * fidelities[1]**(cx_count + swap_overhead*3) * fidelities[2]**(benchmark_qubits))**(1/max_possible_copies) * calculate_idling_error(cost, coherence_times[0], coherence_times[1])**max_possible_copies
 
     result.append([
         id,
@@ -176,7 +183,8 @@ def collect_benchmark_data_analytical (id,
         cost/max_possible_copies,
         max_possible_copies,
         swap_overhead,
-        estimated_average_fidelity
+        estimated_average_fidelity,
+        #transpiled_benchmark            #save the benchmark 
     ])
 
     return 0
@@ -196,26 +204,30 @@ fdlt = [0.999, .985, .97]   #
 ctimes = [.1, .1] #ms
 
 
+#Example use of the program
+for i in range(1, 6):
+    test_q_cnt = 5*i
+    test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
+    collect_benchmark_data_analytical(
+                                    id = i,                                               #An arbitrary id for use in identifying and ordering tests
+                                    benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                    benchmark = test_mark,                                #the actual benchmark circuit
+                                    benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-collect_benchmark_data_analytical(
-                                  id = 1,                                               #An arbitrary id for use in identifying and ordering tests
-                                  benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
-                                  benchmark = test_mark,                                #the actual benchmark circuit
-                                  benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+                                    connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
+                                    connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
+                                    force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
-                                  connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
-                                  connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
-                                  force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+                                    gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                    delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                    fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                    coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
 
-                                  gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
-                                  delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
-                                  fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
-                                  coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
+                                    attempt_parallelism=False,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                    parallelism_level = -1,                                #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
-                                  attempt_parallelism=True,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-
-                                  result=results                                       #The return array to which results are appended
-                                  )
+                                    result=results                                       #The return array to which results are appended
+                                    )
 
 headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
 print(tabulate(results, headers=headers, tablefmt="grid"))
