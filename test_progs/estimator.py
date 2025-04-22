@@ -31,6 +31,13 @@ edges_IBM_27 = [
     (21, 25), (23, 26)
 ]
 
+def make_parallel_copies(circuit, n):
+    total_qubits = circuit.num_qubits * n
+    qc = QuantumCircuit(total_qubits)
+    for i in range(n):
+        offset = i * circuit.num_qubits
+        qc.compose(circuit, qubits=range(offset, offset + circuit.num_qubits), inplace=True)
+    return qc
 
 def delayer_circuit():
     return 0
@@ -81,11 +88,12 @@ def critical_path_analyzer(circuit, qubit_count, single_gate_delay, double_gate_
 def make_bidirectional(edges):
     return edges + [(t, s) for (s, t) in edges if (t, s) not in edges]
 
-def collect_benchmark_data_analytical (id, benchmark_name, benchmark, connectivity_map, force_bi, gateset, num_qubits, delays, result):
+def collect_benchmark_data_analytical (id, benchmark_name, benchmark, connectivity_map, force_bi, gateset, benchmark_qubits, connectivity_map_size, delays, result, attempt_parallelism):
     """Performs analytical calculation of design characteristics
 
        benchmark:        pre-prepared benchmark circuit to run (type QuantumCircuit)
        connectivity_map: connectivity map to turn into coupling map (provider or customm)
+       connectivity_map_size: number of qubits supported by the connectivity map
        force_bi:         Leave at 0 - if fails, try 1
        gateset:          basis gates to use for benchmarking
        num_qubits:       # qubits to use (unstable at high amounts)
@@ -95,38 +103,55 @@ def collect_benchmark_data_analytical (id, benchmark_name, benchmark, connectivi
     ################
     #Problem set up#
     ################
+    if benchmark_qubits > connectivity_map_size:
+        print("ERROR: Benchmark circuit of size" + str(benchmark_qubits) + "is too large for this connectivity map of size " +  str(connectivity_map_size))
+        print("       Recheck your inputs and ensure all values are set correctly.")
+        print("NOTE:  No modifications have been made to the results.")
+        return
     
     #Create our coupling map
     local_coupling_map = CouplingMap(make_bidirectional(connectivity_map) if force_bi else connectivity_map)
+    max_possible_copies = 1
+    if attempt_parallelism:
+        max_possible_copies = int(connectivity_map_size/benchmark_qubits) #Truncate decimal
+        print(max_possible_copies)
+        benchmark = make_parallel_copies(circuit=benchmark, n=max_possible_copies)  #Store parallel-ed version into 
     
     #Transpile to specified connectivity
-    transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map)    
+    transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map)
+    num_qubits_transpiled = transpiled_benchmark.num_qubits
+    
+
+    
     
     swap_overhead = transpiled_benchmark.count_ops().get('swap', 0)
 
     transpiled_depth = transpiled_benchmark.depth()
+
     total_gatecount = 0
     for key in transpiled_benchmark.count_ops():
         total_gatecount += transpiled_benchmark.count_ops()[key]
 
     #Get the critical path (returns cost of the critical path)
-    cost = critical_path_analyzer(transpiled_benchmark, num_qubits, delays[0], delays[1], delays[2])
-
-
-
+    cost = critical_path_analyzer(transpiled_benchmark, num_qubits_transpiled, delays[0], delays[1], delays[2])
 
     result.append([
         id,
         benchmark_name,
-        num_qubits,
+        benchmark_qubits,
         total_gatecount,
         transpiled_depth,
         cost,
+        attempt_parallelism,
+        cost/max_possible_copies,
+        max_possible_copies,
         swap_overhead
     ])
 
     return 0
 
+
+  
 
 
 print("Starting program...")
@@ -140,6 +165,7 @@ test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q
 delay = [0, .15, .1]
 
 
+
 collect_benchmark_data_analytical(
                                   id = 1,
                                   benchmark_name=benchmark, 
@@ -147,10 +173,12 @@ collect_benchmark_data_analytical(
                                   connectivity_map=edges_IBM_27, 
                                   force_bi=1, 
                                   gateset=['rz', 'sx', 'x', 'cx', 'measure'], 
-                                  num_qubits=test_q_cnt, 
+                                  benchmark_qubits=test_q_cnt, 
                                   delays=delay,
-                                  result=results
+                                  result=results,
+                                  attempt_parallelism=True,
+                                  connectivity_map_size=27
                                   )
 
-headers = ["ID", "Benchmark", "Qubit Count", "Gate Count", "Depth", "Exec Time", "SWAP overhead"]
+headers = ["ID", "Benchmark", "Qubit Count", "Gate Count", "Depth", "Exec Time (cost)", "Parallelism", "Cost per Eff. Shot", "Num Parallel Copies", "SWAP overhead"]
 print(tabulate(results, headers=headers, tablefmt="grid"))
