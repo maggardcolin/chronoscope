@@ -1,4 +1,5 @@
-print("Entry")
+print("**Resource and fidelity utility**")
+print("  CS639 FINAL COURSE PROJECT")
 
 
 import numpy as np
@@ -8,11 +9,17 @@ from tabulate import tabulate
 from qiskit import transpile
 from qiskit.circuit import QuantumCircuit, Parameter
 
+import warnings
+
+def fxn():
+    warnings.warn("deprecated", DeprecationWarning)
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    fxn()
+
 
 from qiskit.transpiler import CouplingMap
-
-print("Imports complete...")
-
 
 benchmark_list = [
     "ae", "graphstate", "qft", "qnn", "wstate"
@@ -38,6 +45,11 @@ def make_parallel_copies(circuit, n):
         offset = i * circuit.num_qubits
         qc.compose(circuit, qubits=range(offset, offset + circuit.num_qubits), inplace=True)
     return qc
+
+def calculate_idling_error(exec_time, t1, t2):
+    px_y = (1-m.exp(-exec_time/t1))/4
+    pz = ((1-m.exp(-exec_time/t2))/2) - px_y
+    return 1- (px_y * pz)
 
 def delayer_circuit():
     return 0
@@ -88,8 +100,20 @@ def critical_path_analyzer(circuit, qubit_count, single_gate_delay, double_gate_
 def make_bidirectional(edges):
     return edges + [(t, s) for (s, t) in edges if (t, s) not in edges]
 
-def collect_benchmark_data_analytical (id, benchmark_name, benchmark, connectivity_map, force_bi, gateset, benchmark_qubits, connectivity_map_size, delays, result, attempt_parallelism):
-    """Performs analytical calculation of design characteristics
+def collect_benchmark_data_analytical (id, 
+                                       benchmark_name, 
+                                       benchmark, 
+                                       connectivity_map, 
+                                       force_bi, 
+                                       gateset, 
+                                       benchmark_qubits, 
+                                       connectivity_map_size, 
+                                       delays,
+                                       result,
+                                       attempt_parallelism,
+                                       fidelities,
+                                       coherence_times):
+    """Optimistically performs analytical calculation of design characteristics
 
        benchmark:        pre-prepared benchmark circuit to run (type QuantumCircuit)
        connectivity_map: connectivity map to turn into coupling map (provider or customm)
@@ -114,26 +138,32 @@ def collect_benchmark_data_analytical (id, benchmark_name, benchmark, connectivi
     max_possible_copies = 1
     if attempt_parallelism:
         max_possible_copies = int(connectivity_map_size/benchmark_qubits) #Truncate decimal
-        print(max_possible_copies)
         benchmark = make_parallel_copies(circuit=benchmark, n=max_possible_copies)  #Store parallel-ed version into 
     
     #Transpile to specified connectivity
-    transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map)
+    transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=3)
     num_qubits_transpiled = transpiled_benchmark.num_qubits
     
-
     
     
     swap_overhead = transpiled_benchmark.count_ops().get('swap', 0)
+    cx_count = transpiled_benchmark.count_ops().get('cx', 0)
 
     transpiled_depth = transpiled_benchmark.depth()
 
     total_gatecount = 0
     for key in transpiled_benchmark.count_ops():
         total_gatecount += transpiled_benchmark.count_ops()[key]
+        
+
+
 
     #Get the critical path (returns cost of the critical path)
     cost = critical_path_analyzer(transpiled_benchmark, num_qubits_transpiled, delays[0], delays[1], delays[2])
+    
+    #Estimate fidelity based on individual gate errors and execution time
+    avg_1qgate_p_circ = (total_gatecount - cx_count - swap_overhead)/max_possible_copies
+    estimated_average_fidelity = fidelities[0]**avg_1qgate_p_circ * fidelities[1]**((cx_count + swap_overhead*3)/max_possible_copies) * fidelities[2]**(benchmark_qubits) * calculate_idling_error(cost, coherence_times[0], coherence_times[1])
 
     result.append([
         id,
@@ -145,16 +175,15 @@ def collect_benchmark_data_analytical (id, benchmark_name, benchmark, connectivi
         attempt_parallelism,
         cost/max_possible_copies,
         max_possible_copies,
-        swap_overhead
+        swap_overhead,
+        estimated_average_fidelity
     ])
 
     return 0
 
+#noisy simulation for shots estimator
 
-  
 
-
-print("Starting program...")
 results = []
 
 test_q_cnt = 5
@@ -162,23 +191,31 @@ benchmark = "ae"
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
 #print(critical_path_analyzer(test_mark, test_q_cnt, .001, 1, 1000))
 #print(test_mark)
-delay = [0, .15, .1]
+delay = [0.02, .2, 200]        #us
+fdlt = [0.999, .985, .97]   #
+ctimes = [.1, .1] #ms
 
 
 
 collect_benchmark_data_analytical(
-                                  id = 1,
-                                  benchmark_name=benchmark, 
-                                  benchmark = test_mark, 
-                                  connectivity_map=edges_IBM_27, 
-                                  force_bi=1, 
-                                  gateset=['rz', 'sx', 'x', 'cx', 'measure'], 
-                                  benchmark_qubits=test_q_cnt, 
-                                  delays=delay,
-                                  result=results,
-                                  attempt_parallelism=True,
-                                  connectivity_map_size=27
+                                  id = 1,                                               #An arbitrary id for use in identifying and ordering tests
+                                  benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                  benchmark = test_mark,                                #the actual benchmark circuit
+                                  benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+
+                                  connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
+                                  connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
+                                  force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+
+                                  gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                  delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                  fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                  coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
+
+                                  attempt_parallelism=True,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+
+                                  result=results                                       #The return array to which results are appended
                                   )
 
-headers = ["ID", "Benchmark", "Qubit Count", "Gate Count", "Depth", "Exec Time (cost)", "Parallelism", "Cost per Eff. Shot", "Num Parallel Copies", "SWAP overhead"]
+headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
 print(tabulate(results, headers=headers, tablefmt="grid"))
