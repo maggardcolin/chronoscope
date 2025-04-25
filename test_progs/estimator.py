@@ -1,14 +1,15 @@
 print("**Resource and fidelity utility**")
 print("  CS639 FINAL COURSE PROJECT")
 
-
 import numpy as np
 import math as m
 from mqt.bench import get_benchmark
 from tabulate import tabulate
 from qiskit import transpile
 from qiskit.circuit import QuantumCircuit, Parameter
-
+from qiskit import QuantumCircuit
+from qiskit.converters import circuit_to_dag
+from collections import defaultdict
 import warnings
 
 def fxn():
@@ -18,6 +19,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     fxn()
 
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from qiskit.transpiler import CouplingMap
 
@@ -100,6 +102,81 @@ def critical_path_analyzer(circuit, qubit_count, single_gate_delay, double_gate_
 def make_bidirectional(edges):
     return edges + [(t, s) for (s, t) in edges if (t, s) not in edges]
 
+def calculate_features(circuit: QuantumCircuit, qubit_count: int):
+    dag = circuit_to_dag(circuit)
+    circuit_depth = circuit.depth()
+
+    # Interaction and gate stats
+    interaction_graph = defaultdict(set)
+    total_gates = 0
+    two_qubit_gates = 0
+    measure_count = 0
+
+    for gate in circuit.data:
+        total_gates += 1
+        if gate.operation.name == 'measure':
+            measure_count += 1
+        qargs = [circuit.qubits.index(q) for q in gate.qubits]
+        if len(qargs) == 2:
+            interaction_graph[qargs[0]].add(qargs[1])
+            interaction_graph[qargs[1]].add(qargs[0])
+            two_qubit_gates += 1
+
+    # Communication feature
+    total_degrees = sum(len(neighbors) for neighbors in interaction_graph.values())
+    max_possible = qubit_count * (qubit_count - 1)
+    communication = (total_degrees / max_possible) * 100 if max_possible > 0 else 0
+
+    # Entanglement
+    entanglement = (two_qubit_gates / total_gates) * 100 if total_gates > 0 else 0
+
+    # Parallelism
+    parallelism = ((total_gates / circuit_depth - 1) / (qubit_count - 1)) * 100 if qubit_count > 1 and circuit_depth > 0 else 0
+
+    # Measurement
+    measurement = (measure_count / circuit_depth) * 100 if circuit_depth > 0 else 0
+
+    # Liveness (layer count may differ from circuit depth)
+    dag_layers = list(dag.layers())
+    actual_layer_count = len(dag_layers)
+    liveness_matrix = [[0 for _ in range(actual_layer_count)] for _ in range(qubit_count)]
+
+    for layer_index, layer in enumerate(dag_layers):
+        gate_nodes = layer['graph'].op_nodes()
+        for node in gate_nodes:
+            for qubit in node.qargs:
+                qid = circuit.qubits.index(qubit)
+                liveness_matrix[qid][layer_index] = 1
+
+    total_active = sum(sum(row) for row in liveness_matrix)
+    liveness = (total_active / (qubit_count * actual_layer_count)) * 100 if actual_layer_count > 0 else 0
+
+    # Critical depth proxy: layer with most 2q gates
+    two_q_depthwise = [0] * actual_layer_count
+    for layer_idx, layer in enumerate(dag_layers):
+        for node in layer['graph'].op_nodes():
+            if len(node.qargs) == 2:
+                two_q_depthwise[layer_idx] += 1
+    max_2q_layer = max(two_q_depthwise, default=0)
+    critical_depth = (max_2q_layer / two_qubit_gates) * 100 if two_qubit_gates > 0 else 0
+
+    # truncate all results to 2 decimal places
+    communication = round(communication, 2)
+    critical_depth = round(critical_depth, 2)
+    entanglement = round(entanglement, 2)
+    parallelism = round(parallelism, 2)
+    liveness = round(liveness, 2)
+    measurement = round(measurement, 2)
+
+    return {
+        "communication": communication,
+        "critical-depth": critical_depth,
+        "entanglement": entanglement,
+        "parallelism": parallelism,
+        "liveness": liveness,
+        "measurement": measurement
+    }
+
 def collect_benchmark_data_analytical (id, 
                                        benchmark_name, 
                                        benchmark, 
@@ -148,8 +225,6 @@ def collect_benchmark_data_analytical (id,
     transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=3)
     num_qubits_transpiled = transpiled_benchmark.num_qubits
     
-    
-    
     swap_overhead = transpiled_benchmark.count_ops().get('swap', 0)
     cx_count = transpiled_benchmark.count_ops().get('cx', 0)
 
@@ -158,9 +233,6 @@ def collect_benchmark_data_analytical (id,
     total_gatecount = 0
     for key in transpiled_benchmark.count_ops():
         total_gatecount += transpiled_benchmark.count_ops()[key]
-        
-
-
 
     #Get the critical path (returns cost of the critical path)
     cost = critical_path_analyzer(transpiled_benchmark, num_qubits_transpiled, delays[0], delays[1], delays[2])
@@ -194,8 +266,19 @@ def collect_benchmark_data_analytical (id,
 
 results = []
 
+print("Available benchmarks:")
+for i in range(len(benchmark_list)):
+    print("  " + str(i+1) + ": " + benchmark_list[i])
+print("Select a benchmark to run (1-" + str(len(benchmark_list)) + "):")
+benchmark_choice = int(input()) - 1
+if benchmark_choice < 0 or benchmark_choice >= len(benchmark_list):
+    print("ERROR: Invalid benchmark choice. Exiting.")
+    exit(1)
+
+benchmark = benchmark_list[benchmark_choice]
+print("You selected: " + benchmark)
+
 test_q_cnt = 5
-benchmark = "ae"
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
 #print(critical_path_analyzer(test_mark, test_q_cnt, .001, 1, 1000))
 #print(test_mark)
@@ -208,6 +291,8 @@ ctimes = [.1, .1] #ms
 for i in range(1, 6):
     test_q_cnt = 5*i
     test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
+    print("Benchmark circuit features for num_qubits = " + str(test_q_cnt) + ":")
+    print(calculate_features(test_mark, test_q_cnt))
     collect_benchmark_data_analytical(
                                     id = i,                                               #An arbitrary id for use in identifying and ordering tests
                                     benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
@@ -228,6 +313,6 @@ for i in range(1, 6):
 
                                     result=results                                       #The return array to which results are appended
                                     )
-
+    
 headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
 print(tabulate(results, headers=headers, tablefmt="grid"))
