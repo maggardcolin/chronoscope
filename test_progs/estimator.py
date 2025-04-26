@@ -42,23 +42,35 @@ edges_IBM_27 = [
 def estimate_shots(net_fidelities):
     import matplotlib.pyplot as plt
     import math
+    import numpy as np
 
-    desired_fidelity = float(input("Enter desired fidelity: "))
-    shots = []
+    desired_fidelities = np.arange(0.2, 1.2, 0.2)  # [0.2, 0.4, 0.6, 0.8, 1.0]
 
-    for i, net_fidelity in enumerate(net_fidelities, 1):  # enumerate starting from 1 for qubit counts
-        shots_needed = math.ceil(desired_fidelity / net_fidelity)
-        if shots_needed < 1:
-            shots_needed = 1
-        
-        shots.append(shots_needed)
-        print(f"Number of shots needed for {i} qubits to maintain fidelity {desired_fidelity}: {shots_needed}")
+    fig, axes = plt.subplots(len(desired_fidelities), 1, figsize=(8, 20))
+    fig.tight_layout(pad=5.0)  # spacing between plots
 
-    plt.plot(range(1, len(net_fidelities)+1), shots)
-    plt.xlabel("Number of Qubits")
-    plt.ylabel("Number of Shots Needed")
-    plt.title("Number of Shots vs Number of Qubits")
-    plt.grid(True)
+    for idx, desired_fidelity in enumerate(desired_fidelities):
+        ax = axes[idx]
+        print(f"\nDesired Fidelity: {desired_fidelity}")
+        shots = []
+        for i, net_fidelity in enumerate(net_fidelities, 1):  # i = number of qubits
+            shots_needed = math.ceil(desired_fidelity / net_fidelity)
+            if shots_needed < 1:
+                shots_needed = 1
+            shots.append(shots_needed)
+            print(f"  {i} qubits -> {shots_needed} shots needed")
+
+        ax.plot(range(1, len(net_fidelities)+1), shots, marker='o')
+        if idx == len(desired_fidelities) - 1:
+            ax.set_xlabel("Number of Qubits")  # only set xlabel on bottom plot
+        else:
+            ax.set_xticklabels([])  # hide xticklabels for upper plots
+
+        ax.set_ylabel("Shots (log)")
+        ax.set_yscale('log')
+        ax.set_title(f"Target Fidelity: {desired_fidelity:.1f}")
+        ax.grid(True, which="both", linestyle='--')
+
     plt.show()
 
 
