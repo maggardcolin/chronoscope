@@ -23,9 +23,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from qiskit.transpiler import CouplingMap
 
-benchmark_list = [
-    "ae", "graphstate", "qft", "qnn", "wstate"
-]
+benchmark_list = ["ae", "graphstate", "portfolioqaoa", "portfoliovqe",
+              "qaoa", "qft", "qnn", "vqe", "wstate"]
 
 edges_IBM_27 = [
     (0, 1), (1, 2), (2, 3),
@@ -309,9 +308,14 @@ delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   #
 ctimes = [.1, .1] #ms
 
+large_circuits = ["portfolioqaoa", "portfoliovqe", "qaoa", "vqe"]
+max_qubits = 28
+if benchmark in large_circuits:
+    max_qubits = 11
+    print("WARNING: Large circuit benchmark selected. Running only 1-10 qubits.")
 
 #Example use of the program
-for i in range(1, 28):
+for i in range(1, max_qubits):
     try:
         test_q_cnt = i
         test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
