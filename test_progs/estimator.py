@@ -40,6 +40,29 @@ edges_IBM_27 = [
     (21, 25), (23, 26)
 ]
 
+def estimate_shots(net_fidelities):
+    import matplotlib.pyplot as plt
+    import math
+
+    desired_fidelity = float(input("Enter desired fidelity: "))
+    shots = []
+
+    for i, net_fidelity in enumerate(net_fidelities, 1):  # enumerate starting from 1 for qubit counts
+        shots_needed = math.ceil(desired_fidelity / net_fidelity)
+        if shots_needed < 1:
+            shots_needed = 1
+        
+        shots.append(shots_needed)
+        print(f"Number of shots needed for {i} qubits to maintain fidelity {desired_fidelity}: {shots_needed}")
+
+    plt.plot(range(1, len(net_fidelities)+1), shots)
+    plt.xlabel("Number of Qubits")
+    plt.ylabel("Number of Shots Needed")
+    plt.title("Number of Shots vs Number of Qubits")
+    plt.grid(True)
+    plt.show()
+
+
 def make_parallel_copies(circuit, n):
     total_qubits = circuit.num_qubits * n
     qc = QuantumCircuit(total_qubits)
@@ -288,31 +311,38 @@ ctimes = [.1, .1] #ms
 
 
 #Example use of the program
-for i in range(1, 6):
-    test_q_cnt = 5*i
-    test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
-    print("Benchmark circuit features for num_qubits = " + str(test_q_cnt) + ":")
-    print(calculate_features(test_mark, test_q_cnt))
-    collect_benchmark_data_analytical(
-                                    id = i,                                               #An arbitrary id for use in identifying and ordering tests
-                                    benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
-                                    benchmark = test_mark,                                #the actual benchmark circuit
-                                    benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+for i in range(1, 28):
+    try:
+        test_q_cnt = i
+        test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
+        print("Benchmark circuit features for num_qubits = " + str(test_q_cnt) + ":")
+        print(calculate_features(test_mark, test_q_cnt))
+        collect_benchmark_data_analytical(
+                                        id = i,                                               #An arbitrary id for use in identifying and ordering tests
+                                        benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                        benchmark = test_mark,                                #the actual benchmark circuit
+                                        benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-                                    connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
-                                    connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
-                                    force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+                                        connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
+                                        connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
+                                        force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
-                                    gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
-                                    delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
-                                    fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
-                                    coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
+                                        gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                        delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                        fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                        coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
 
-                                    attempt_parallelism=False,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-                                    parallelism_level = -1,                                #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+                                        attempt_parallelism=False,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                        parallelism_level = -1,                                #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
-                                    result=results                                       #The return array to which results are appended
-                                    )
-    
+                                        result=results                                       #The return array to which results are appended
+                                        )
+    except Exception as e:
+        print(f"Error processing benchmark with {i} qubits: {e}")
+        continue
+        
 headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
 print(tabulate(results, headers=headers, tablefmt="grid"))
+
+net_fidelities = [row[-1] for row in results]  # last column of each result row is Net Fidelity
+estimate_shots(net_fidelities)
