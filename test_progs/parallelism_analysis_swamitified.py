@@ -4,59 +4,37 @@ os.system('cls' if os.name == 'nt' else 'clear')
 verbose = 1
 if verbose:
     print("    +----------------------------------------------+")
-    print("    |                                              |")
     print("    |    Resource and Fidelity Utility for QAOA    |")
     print("    |                                              |")
     print("    |          CS639 FINAL COURSE PROJECT          |")
-    print("    |                                              |")
     print("    +----------------------------------------------+")
     print()
-    print("Initializing... ")
-    print()
-    print()
+    print("Initializing...", end='', flush=True)
 
 import numpy as np
 import math as m
+print(".", end = '', flush=True)
 from mqt.bench import get_benchmark
 from tabulate import tabulate
+print(".", end = '', flush=True)
 from qiskit import transpile
-from qiskit.circuit import QuantumCircuit, Parameter
+from qiskit.circuit import QuantumCircuit
+print(".", end = '', flush=True)
 from qiskit import QuantumCircuit
 from qiskit.converters import circuit_to_dag
+print(".", end = '', flush=True)
 from collections import defaultdict
 import warnings
+from connectivity_maps import edges_mesh, edges_trapped_ion, edges_heavy_hex
+print(".", end = '', flush=True)
+from qiskit.transpiler import CouplingMap
+import connectivity_maps as cn
+print(".", end = '', flush=True)
 
-#Sim imports
-from qiskit_aer.noise import NoiseModel, depolarizing_error
-from qiskit_aer.noise.errors import ReadoutError
-from qiskit_aer import AerSimulator
+os.system('cls' if os.name == 'nt' else 'clear')
 
 def fxn():
     warnings.warn("deprecated", DeprecationWarning)
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    fxn()
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-from qiskit.transpiler import CouplingMap
-
-benchmark_list = ["ae", "graphstate", "portfolioqaoa", "portfoliovqe",
-              "qaoa", "qft", "qnn", "vqe", "wstate"]
-
-edges_IBM_27 = [
-    (0, 1), (1, 2), (2, 3),
-    (3, 4), (4, 5), (5, 6),
-    (6, 7), (7, 8), (8, 9),
-    (1, 10), (3, 11), (5, 12), (7, 13), (9, 14),
-    (10, 11), (11, 12), (12, 13), (13, 14),
-    (10, 15), (11, 16), (12, 17), (13, 18), (14, 19),
-    (15, 16), (16, 17), (17, 18), (18, 19),
-    (15, 20), (16, 21), (17, 22), (18, 23), (19, 24),
-    (20, 21), (21, 22), (22, 23), (23, 24),
-    (21, 25), (23, 26)
-]
 
 def make_parallel_copies(circuit, n):
     total_qubits = circuit.num_qubits * n
@@ -298,120 +276,119 @@ def collect_benchmark_data_analytical (id,
 #   connectivity)
 
 #What compilation settings to use to optimize these     (INCOMPLETE)
-#   
 
-#De
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    fxn()
 
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+
+print("    +----------------------------------------------+")
+print("    |                                              |")
+print("    |  ++Resource and Fidelity Utility for QAOA++  |")
+print("    |                                              |")
+print("    |          CS639 FINAL COURSE PROJECT          |")
+print("    |                                              |")
+print("    +----------------------------------------------+")
+print()
 results = []
 
-print("Available benchmarks:")
-for i in range(len(benchmark_list)):
-    print("  [" + str(i+1) + "] " + benchmark_list[i])
-print("Select a benchmark to run (1-" + str(len(benchmark_list)) + "):")
-benchmark_choice = int(input()) - 1
-if benchmark_choice < 0 or benchmark_choice >= len(benchmark_list):
-    print("ERROR: Invalid benchmark choice. Exiting.")
-    exit(1)
-os.system('cls' if os.name == 'nt' else 'clear')
+benchmark = "qaoa"
 
-benchmark = benchmark_list[benchmark_choice]
-print("You selected: " + benchmark)
-
-#Get the coupling map
-
-
-
-
-
-
-test_q_cnt = 5      #Fixed to 5 do not change 
+test_q_cnt = 6      #Fixed to 5 do not change 
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
-#print(critical_path_analyzer(test_mark, test_q_cnt, .001, 1, 1000))
-#print(test_mark)
 delay = [0.02, .2, 200]        #us
-fdlt = [0.999, .985, .97]   #
+fdlt = [0.999, .985, .97]   # %
 ctimes = [.1, .1] #ms
 
 #Example use of the program
 
-max_copies = 5
+max_copies = int(100/test_q_cnt)    #truncate
+
+print("QAOA problem size is " + str(test_q_cnt) + " qubits running 1 - " + str(max_copies) + " circuits in parallel.")
+
 test_number = 1
+connectivity_maps = [edges_mesh, edges_trapped_ion, edges_heavy_hex]
+connectivity_maps_ascii = ["Mesh", "Trapped Ion", "Heavy Hex"]
+ascii_index = 0
+for connectivity_map in connectivity_maps:
+    print()
+    print()
+    print(connectivity_maps_ascii[ascii_index])
+    ascii_index = ascii_index + 1
+    #Benchmark data for no parallelism 
+    collect_benchmark_data_analytical(
+                                            id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
+                                            benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                            benchmark = test_mark,                                #the actual benchmark circuit
+                                            benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-#Benchmark data for no parallelism 
-collect_benchmark_data_analytical(
-                                        id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
-                                        benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
-                                        benchmark = test_mark,                                #the actual benchmark circuit
-                                        benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+                                            connectivity_map=connectivity_map,                        #edge map of the arch we are testing
+                                            connectivity_map_size=100,                             #Maximum number of allowed qubits on the map
+                                            force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
-                                        connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
-                                        connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
-                                        force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+                                            gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                            delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                            fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                            coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
 
-                                        gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
-                                        delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
-                                        fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
-                                        coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
+                                            attempt_parallelism=False,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                            parallelism_level = -1,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
-                                        attempt_parallelism=False,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-                                        parallelism_level = -1,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+                                            result=results                                       #The return array to which results are appended
+                                            )
 
-                                        result=results                                       #The return array to which results are appended
-                                        )
+    test_number = test_number + 1
 
-test_number = test_number + 1
+    #Parallel metrification
+    for i in range(2, max_copies + 1):
+        try:
+            test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
+            collect_benchmark_data_analytical(
+                                            id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
+                                            benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                            benchmark = test_mark,                                #the actual benchmark circuit
+                                            benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-for i in range(2, max_copies + 1):
-    try:
-        test_q_cnt = 5
-        test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
-        #print("Benchmark circuit features for num_qubits = " + str(test_q_cnt) + ":")
-        #print(calculate_features(test_mark, test_q_cnt))
-        collect_benchmark_data_analytical(
-                                        id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
-                                        benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
-                                        benchmark = test_mark,                                #the actual benchmark circuit
-                                        benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+                                            connectivity_map=connectivity_map,                        #edge map of the arch we are testing
+                                            connectivity_map_size=100,                             #Maximum number of allowed qubits on the map
+                                            force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
-                                        connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
-                                        connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
-                                        force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+                                            gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                            delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                            fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                            coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
 
-                                        gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
-                                        delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
-                                        fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
-                                        coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
+                                            attempt_parallelism=True,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                            parallelism_level = i,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
-                                        attempt_parallelism=True,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-                                        parallelism_level = i,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+                                            result=results                                       #The return array to which results are appended
+                                            )
+            test_number = test_number + 1
+        except Exception as e:
+            print(f"Error processing benchmark with {i} qubits: {e}")
+            continue
+            
+    headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
+    #print(tabulate(results, headers=headers, tablefmt="grid"))
 
-                                        result=results                                       #The return array to which results are appended
-                                        )
-        test_number = test_number + 1
-    except Exception as e:
-        print(f"Error processing benchmark with {i} qubits: {e}")
-        continue
-        
-headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
-print(tabulate(results, headers=headers, tablefmt="grid"))
+    #print(f"Analytical values calulated for connectivity {connectivity_map}...\n")
+    print("Calculating runtime for 1024 shots...\n")
 
-net_fidelities = [row[-1] for row in results]  # last column of each result row is Net Fidelity
-print("Analytical values calulated...")
-print()
-print("Calculating runtime for 1024 shots...")
-print()
+    runtime_headers = ["# Copies", "Runtime (us)", "Speedup (single/parallel)", "Fidelity"]
+    runtime_results = []
+    for run in results:
+        runtime_no_copies = results[0][7] * 1024
+        runtime_results.append([
+            run[8],
+            run[7] * 1024,
+            runtime_no_copies/(run[7] * 1024),
+            run[10]
+            ])
 
-runtime_headers = ["# Copies", "Runtime (us)", "Speedup (single/parallel)", "Fidelity"]
-runtime_results = []
-for run in results:
-    runtime_no_copies = results[0][7] * 1024
-    runtime_results.append([
-         run[8],
-         run[7] * 1024,
-         runtime_no_copies/(run[7] * 1024),
-        run[10]
-        ])
+    print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
+    runtime_results = []
+    results = []
 
-print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
-print()
-print("Completed. Exiting...")
+print("\nCompleted. Exiting...")
