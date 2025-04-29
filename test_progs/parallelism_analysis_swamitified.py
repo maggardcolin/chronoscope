@@ -296,7 +296,7 @@ results = []
 
 benchmark = "qaoa"
 
-test_q_cnt = 6      #Fixed to 5 do not change 
+test_q_cnt = 5      #Fixed to 5 do not change 
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
 delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   # %
@@ -371,7 +371,7 @@ for connectivity_map in connectivity_maps:
             continue
             
     headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
-    #print(tabulate(results, headers=headers, tablefmt="grid"))
+    print(tabulate(results, headers=headers, tablefmt="grid"))
 
     #print(f"Analytical values calulated for connectivity {connectivity_map}...\n")
     print("Calculating runtime for 1024 shots...\n")
