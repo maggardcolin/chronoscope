@@ -39,8 +39,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from qiskit.transpiler import CouplingMap
 
-benchmark_list = ["ae", "graphstate", "portfolioqaoa", "portfoliovqe",
-              "qaoa", "qft", "qnn", "vqe", "wstate"]
+benchmark_list = ["qaoa"]
 
 edges_IBM_27 = [
     (0, 1), (1, 2), (2, 3),
