@@ -1,0 +1,14 @@
+#ALL 100 QUBIT 
+
+#MESH
+
+
+#IBM STYLE
+
+
+#HEAVY HEX
+
+
+#TRAPPED ION
+# 20 x 5
+
