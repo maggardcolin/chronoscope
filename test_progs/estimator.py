@@ -1,16 +1,5 @@
-verbose = 0
-if verbose:
-    print()
-    print()
-    print("    +-------------------------------------+")
-    print("    |                                     |")
-    print("    |  ++Resource and Fidelity Utility++  |")
-    print("    |                                     |")
-    print("    |     CS639 FINAL COURSE PROJECT      |")
-    print("    |                                     |")
-    print("    +-------------------------------------+")
-    print()
-    print("Initializing RFU... ")
+print("**Resource and fidelity utility**")
+print("  CS639 FINAL COURSE PROJECT")
 
 import numpy as np
 import math as m
@@ -18,18 +7,17 @@ from mqt.bench import get_benchmark
 from tabulate import tabulate
 from qiskit import transpile
 from qiskit.circuit import QuantumCircuit, Parameter
-from qiskit_aer import AerSimulator
-
-
-#Sim imports
-from qiskit_aer.noise import NoiseModel, depolarizing_error
-from qiskit_aer.noise.errors import ReadoutError
-
 from qiskit import QuantumCircuit
 from qiskit.converters import circuit_to_dag
 from collections import defaultdict
 import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+def fxn():
+    warnings.warn("deprecated", DeprecationWarning)
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    fxn()
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -99,14 +87,6 @@ def calculate_idling_error(exec_time, t1, t2):
     pz = ((1-m.exp(-exec_time/t2))/2) - px_y
     return 1- (px_y * pz)
 
-def total_variation_distance(P, Q):
-    all_keys = set(P) | set(Q)
-    return 0.5 * sum(abs(P.get(k, 0) - Q.get(k, 0)) for k in all_keys)
-
-def normalize(counts):
-    total = sum(counts.values())
-    return {k: v / total for k, v in counts.items()}
-
 def delayer_circuit():
     return 0
 
@@ -155,21 +135,6 @@ def critical_path_analyzer(circuit, qubit_count, single_gate_delay, double_gate_
 
 def make_bidirectional(edges):
     return edges + [(t, s) for (s, t) in edges if (t, s) not in edges]
-
-def create_noise_model(platform_name):
-    fidelity_params = {
-        "IonQ_Aria": {"1q": 0.999, "2q": 0.99, "ro": 0.9999},
-        "Quantinuum_H2": {"1q": 0.9997, "2q": 0.98, "ro": 0.9999},
-        "IBM_Montreal": {"1q": 0.999, "2q": 0.985, "ro": 0.97},
-    }
-    f = fidelity_params[platform_name]
-    noise_model = NoiseModel()
-    noise_model.add_all_qubit_quantum_error(depolarizing_error(1 - f["1q"], 1), ['rx', 'rz', 'h', 'x', 'u3'])
-    noise_model.add_all_qubit_quantum_error(depolarizing_error(1 - f["2q"], 2), ['cx', 'cz', 'rzz', 'xx'])
-
-    readout_error = ReadoutError([[f["ro"], 1 - f["ro"]], [1 - f["ro"], f["ro"]]])
-    noise_model.add_all_qubit_readout_error(readout_error)
-    return noise_model
 
 def calculate_features(circuit: QuantumCircuit, qubit_count: int):
     dag = circuit_to_dag(circuit)
@@ -311,16 +276,6 @@ def collect_benchmark_data_analytical (id,
     
     
     #replace with TVD
-    
-    sim = AerSimulator(noise_model=create_noise_model("IBM_Montreal"))
-    _result = sim.run(transpiled_benchmark, shots=128).result()
-    _counts = _result.get_counts()
-    _norm_counts = normalize(_counts)
-    _ideal_key = max(_counts, key=_counts.get)
-    _ideal_dist = {_ideal_key: 1.0}
-    _tvd = total_variation_distance(_norm_counts, _ideal_dist)
-
-    
     estimated_average_fidelity = (fidelities[0]**oneqgate_p_circ * fidelities[1]**(cx_count + swap_overhead*3) * fidelities[2]**(benchmark_qubits))**(1/max_possible_copies) * calculate_idling_error(cost, coherence_times[0], coherence_times[1])**max_possible_copies
 
     result.append([
@@ -335,29 +290,16 @@ def collect_benchmark_data_analytical (id,
         max_possible_copies,
         swap_overhead,
         estimated_average_fidelity,
-        _tvd,
         #transpiled_benchmark            #save the benchmark 
     ])
 
     return 0
 
-
-#Depencies completed
-
-###########################
-# START OF ACTUAL PROGRAM #
-###########################
-if verbose:
-    print("Initialized")
-    print("Beginning execution...")
-    print()
-    print()
-
+#noisy simulation for shots estimator
 
 
 results = []
 
-#User benchmark selection
 print("Available benchmarks:")
 for i in range(len(benchmark_list)):
     print("  " + str(i+1) + ": " + benchmark_list[i])
