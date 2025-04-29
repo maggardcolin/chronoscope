@@ -1,58 +1,18 @@
-verbose = 1
-if verbose:
-    print()
-    print()
-    print("    +----------------------------------------------+")
-    print("    |                                              |")
-    print("    |  ++Resource and Fidelity Utility for QAOA++  |")
-    print("    |                                              |")
-    print("    |          CS639 FINAL COURSE PROJECT          |")
-    print("    |                                              |")
-    print("    +----------------------------------------------+")
-    print()
-    print("Initializing RFU... ")
-
 import numpy as np
 import math as m
 from mqt.bench import get_benchmark
 from tabulate import tabulate
 from qiskit import transpile
-from qiskit.circuit import QuantumCircuit, Parameter
+from qiskit.circuit import QuantumCircuit
 from qiskit import QuantumCircuit
 from qiskit.converters import circuit_to_dag
 from collections import defaultdict
 import warnings
-
-#Sim imports
-from qiskit_aer.noise import NoiseModel, depolarizing_error
-from qiskit_aer.noise.errors import ReadoutError
-from qiskit_aer import AerSimulator
+from connectivity_maps import edges_mesh, edges_trapped_ion, edges_heavy_hex
+from qiskit.transpiler import CouplingMap
 
 def fxn():
     warnings.warn("deprecated", DeprecationWarning)
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    fxn()
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-from qiskit.transpiler import CouplingMap
-
-benchmark_list = ["qaoa"]
-
-edges_IBM_27 = [
-    (0, 1), (1, 2), (2, 3),
-    (3, 4), (4, 5), (5, 6),
-    (6, 7), (7, 8), (8, 9),
-    (1, 10), (3, 11), (5, 12), (7, 13), (9, 14),
-    (10, 11), (11, 12), (12, 13), (13, 14),
-    (10, 15), (11, 16), (12, 17), (13, 18), (14, 19),
-    (15, 16), (16, 17), (17, 18), (18, 19),
-    (15, 20), (16, 21), (17, 22), (18, 23), (19, 24),
-    (20, 21), (21, 22), (22, 23), (23, 24),
-    (21, 25), (23, 26)
-]
 
 def make_parallel_copies(circuit, n):
     total_qubits = circuit.num_qubits * n
@@ -294,22 +254,27 @@ def collect_benchmark_data_analytical (id,
 #   connectivity)
 
 #What compilation settings to use to optimize these     (INCOMPLETE)
-#   
 
-#De
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    fxn()
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+print()
+print()
+print("    +----------------------------------------------+")
+print("    |                                              |")
+print("    |  ++Resource and Fidelity Utility for QAOA++  |")
+print("    |                                              |")
+print("    |          CS639 FINAL COURSE PROJECT          |")
+print("    |                                              |")
+print("    +----------------------------------------------+")
+print("\nInitializing RFU... ")
 
 results = []
 
-print("Available benchmarks:")
-for i in range(len(benchmark_list)):
-    print("  [" + str(i+1) + "] " + benchmark_list[i])
-print("Select a benchmark to run (1-" + str(len(benchmark_list)) + "):")
-benchmark_choice = int(input()) - 1
-if benchmark_choice < 0 or benchmark_choice >= len(benchmark_list):
-    print("ERROR: Invalid benchmark choice. Exiting.")
-    exit(1)
-
-benchmark = benchmark_list[benchmark_choice]
+benchmark = "qaoa"
 print("You selected: " + benchmark)
 
 test_q_cnt = 5
@@ -319,14 +284,6 @@ test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q
 delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   #
 ctimes = [.1, .1] #ms
-
-large_circuits = ["portfolioqaoa", "portfoliovqe", "qaoa", "vqe"]
-max_qubits = 10
-if benchmark in large_circuits:
-    max_qubits = 11
-    print("WARNING: Large circuit benchmark selected. Running only 1-10 qubits.")
-
-#Example use of the program
 
 max_copies = 5
 test_number = 1
@@ -338,7 +295,7 @@ collect_benchmark_data_analytical(
                                         benchmark = test_mark,                                #the actual benchmark circuit
                                         benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-                                        connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
+                                        connectivity_map=edges_mesh,                        #edge map of the arch we are testing
                                         connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
                                         force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
@@ -359,15 +316,13 @@ for i in range(2, max_copies + 1):
     try:
         test_q_cnt = 5
         test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
-        #print("Benchmark circuit features for num_qubits = " + str(test_q_cnt) + ":")
-        #print(calculate_features(test_mark, test_q_cnt))
         collect_benchmark_data_analytical(
                                         id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
                                         benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
                                         benchmark = test_mark,                                #the actual benchmark circuit
                                         benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-                                        connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
+                                        connectivity_map=edges_mesh,                        #edge map of the arch we are testing
                                         connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
                                         force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
@@ -389,11 +344,8 @@ for i in range(2, max_copies + 1):
 headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
 print(tabulate(results, headers=headers, tablefmt="grid"))
 
-net_fidelities = [row[-1] for row in results]  # last column of each result row is Net Fidelity
-print("Analytical values calulated...")
-print()
-print("Calculating runtime for 1024 shots...")
-print()
+print("Analytical values calulated...\n")
+print("Calculating runtime for 1024 shots...\n")
 
 runtime_headers = ["# Copies", "Runtime (us)", "Speedup (single/parallel)", "Fidelity"]
 runtime_results = []
@@ -407,5 +359,4 @@ for run in results:
         ])
 
 print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
-print()
-print("Completed. Exiting...")
+print("\nCompleted. Exiting...")
