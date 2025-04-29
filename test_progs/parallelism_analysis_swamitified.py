@@ -1,14 +1,14 @@
-verbose = 0
+verbose = 1
 if verbose:
     print()
     print()
-    print("    +-------------------------------------+")
-    print("    |                                     |")
-    print("    |  ++Resource and Fidelity Utility++  |")
-    print("    |                                     |")
-    print("    |     CS639 FINAL COURSE PROJECT      |")
-    print("    |                                     |")
-    print("    +-------------------------------------+")
+    print("    +----------------------------------------------+")
+    print("    |                                              |")
+    print("    |  ++Resource and Fidelity Utility for QAOA++  |")
+    print("    |                                              |")
+    print("    |          CS639 FINAL COURSE PROJECT          |")
+    print("    |                                              |")
+    print("    +----------------------------------------------+")
     print()
     print("Initializing RFU... ")
 
@@ -54,59 +54,6 @@ edges_IBM_27 = [
     (20, 21), (21, 22), (22, 23), (23, 24),
     (21, 25), (23, 26)
 ]
-
-
-def create_noise_model(platform_name):
-    fidelity_params = {
-        "IonQ_Aria": {"1q": 0.999, "2q": 0.99, "ro": 0.9999},
-        "Quantinuum_H2": {"1q": 0.9997, "2q": 0.98, "ro": 0.9999},
-        "IBM_Montreal": {"1q": 0.999, "2q": 0.985, "ro": 0.97},
-    }
-    f = fidelity_params[platform_name]
-    noise_model = NoiseModel()
-    noise_model.add_all_qubit_quantum_error(depolarizing_error(1 - f["1q"], 1), ['rx', 'rz', 'h', 'x', 'u3'])
-    noise_model.add_all_qubit_quantum_error(depolarizing_error(1 - f["2q"], 2), ['cx', 'cz', 'rzz', 'xx'])
-
-    readout_error = ReadoutError([[f["ro"], 1 - f["ro"]], [1 - f["ro"], f["ro"]]])
-    noise_model.add_all_qubit_readout_error(readout_error)
-    return noise_model
-
-
-
-def estimate_shots(net_fidelities):
-    import matplotlib.pyplot as plt
-    import math
-    import numpy as np
-
-    desired_fidelities = np.arange(0.6, 1.0, 0.1)  # [0.2, 0.4, 0.6, 0.8]
-
-    fig, axes = plt.subplots(len(desired_fidelities), 1, figsize=(8, 20))
-    fig.tight_layout(pad=5.0)  # spacing between plots
-
-    for idx, desired_fidelity in enumerate(desired_fidelities):
-        ax = axes[idx]
-        print(f"\nDesired Fidelity: {desired_fidelity}")
-        shots = []
-        for i, net_fidelity in enumerate(net_fidelities, 1):  # i = number of qubits
-            shots_needed = math.ceil(desired_fidelity / net_fidelity)
-            if shots_needed < 1:
-                shots_needed = 1
-            shots.append(shots_needed)
-            print(f"  {i} qubits -> {shots_needed} shots needed")
-
-        ax.plot(range(1, len(net_fidelities)+1), shots, marker='o')
-        if idx == len(desired_fidelities) - 1:
-            ax.set_xlabel("Number of Qubits")  # only set xlabel on bottom plot
-        else:
-            ax.set_xticklabels([])  # hide xticklabels for upper plots
-
-        ax.set_ylabel("Shots (log)")
-        ax.set_yscale('log')
-        ax.set_title(f"Target Fidelity: {desired_fidelity:.1f}")
-        ax.grid(True, which="both", linestyle='--')
-
-    plt.show()
-
 
 def make_parallel_copies(circuit, n):
     total_qubits = circuit.num_qubits * n
