@@ -1,11 +1,13 @@
 import matplotlib.pyplot as plt
 import networkx as nx
-from connectivity_maps import edges_mesh, edges_trapped_ion, edges_heavy_hex
+from connectivity_maps import edges_mesh, edges_trapped_ion_5_20, edges_heavy_hex, edges_trapped_ion_10_10
 
 # Dictionary of connectivity maps
 connectivity_maps = {
     "Mesh": edges_mesh,
-    "Trapped Ion": edges_trapped_ion,
+    "Trapped Ion 10 10": edges_trapped_ion_10_10,
+    "Trapped Ion 5 20": edges_trapped_ion_5_20,3
+    
     "Heavy Hex": edges_heavy_hex
 }
 
