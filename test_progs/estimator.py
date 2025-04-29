@@ -44,7 +44,7 @@ def estimate_shots(net_fidelities):
     import math
     import numpy as np
 
-    desired_fidelities = np.arange(0.2, 1.2, 0.2)  # [0.2, 0.4, 0.6, 0.8, 1.0]
+    desired_fidelities = np.arange(0.2, 1.0, 0.2)  # [0.2, 0.4, 0.6, 0.8, 1.0]
 
     fig, axes = plt.subplots(len(desired_fidelities), 1, figsize=(8, 20))
     fig.tight_layout(pad=5.0)  # spacing between plots
