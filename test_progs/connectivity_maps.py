@@ -272,8 +272,10 @@ edges_trapped_ion_10_10 = [
 
 def get_map(map_id):
     if map_id==1:
-        return edges_trapped_ion
+        return edges_trapped_ion_5_20
     if map_id==2:
         return edges_heavy_hex
     if map_id==3:
         return edges_mesh
+    if map_id==4:
+        return edges_trapped_ion_10_10
