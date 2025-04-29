@@ -285,78 +285,83 @@ delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   #
 ctimes = [.1, .1] #ms
 
-max_copies = 5
+max_copies = 20
 test_number = 1
+connectivity_maps = [edges_mesh, edges_trapped_ion, edges_heavy_hex]
 
-#Benchmark data for no parallelism 
-collect_benchmark_data_analytical(
-                                        id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
-                                        benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
-                                        benchmark = test_mark,                                #the actual benchmark circuit
-                                        benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+for connectivity_map in connectivity_maps:
+    #Benchmark data for no parallelism 
+    collect_benchmark_data_analytical(
+                                            id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
+                                            benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                            benchmark = test_mark,                                #the actual benchmark circuit
+                                            benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-                                        connectivity_map=edges_mesh,                        #edge map of the arch we are testing
-                                        connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
-                                        force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+                                            connectivity_map=connectivity_map,                        #edge map of the arch we are testing
+                                            connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
+                                            force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
-                                        gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
-                                        delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
-                                        fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
-                                        coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
+                                            gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                            delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                            fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                            coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
 
-                                        attempt_parallelism=False,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-                                        parallelism_level = -1,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+                                            attempt_parallelism=False,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                            parallelism_level = -1,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
-                                        result=results                                       #The return array to which results are appended
-                                        )
+                                            result=results                                       #The return array to which results are appended
+                                            )
 
-test_number = test_number + 1
+    test_number = test_number + 1
 
-for i in range(2, max_copies + 1):
-    try:
-        test_q_cnt = 5
-        test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
-        collect_benchmark_data_analytical(
-                                        id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
-                                        benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
-                                        benchmark = test_mark,                                #the actual benchmark circuit
-                                        benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+    for i in range(2, max_copies + 1):
+        try:
+            test_q_cnt = 5
+            test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
+            collect_benchmark_data_analytical(
+                                            id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
+                                            benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                            benchmark = test_mark,                                #the actual benchmark circuit
+                                            benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
 
-                                        connectivity_map=edges_mesh,                        #edge map of the arch we are testing
-                                        connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
-                                        force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+                                            connectivity_map=connectivity_map,                        #edge map of the arch we are testing
+                                            connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
+                                            force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
-                                        gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
-                                        delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
-                                        fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
-                                        coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
+                                            gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                            delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                            fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                            coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
 
-                                        attempt_parallelism=True,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-                                        parallelism_level = i,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+                                            attempt_parallelism=True,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                            parallelism_level = i,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
-                                        result=results                                       #The return array to which results are appended
-                                        )
-        test_number = test_number + 1
-    except Exception as e:
-        print(f"Error processing benchmark with {i} qubits: {e}")
-        continue
-        
-headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
-print(tabulate(results, headers=headers, tablefmt="grid"))
+                                            result=results                                       #The return array to which results are appended
+                                            )
+            test_number = test_number + 1
+        except Exception as e:
+            print(f"Error processing benchmark with {i} qubits: {e}")
+            continue
+            
+    headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
+    #print(tabulate(results, headers=headers, tablefmt="grid"))
 
-print("Analytical values calulated...\n")
-print("Calculating runtime for 1024 shots...\n")
+    print(f"Analytical values calulated for connectivity {connectivity_map}...\n")
+    print("Calculating runtime for 1024 shots...\n")
 
-runtime_headers = ["# Copies", "Runtime (us)", "Speedup (single/parallel)", "Fidelity"]
-runtime_results = []
-for run in results:
-    runtime_no_copies = results[0][7] * 1024
-    runtime_results.append([
-         run[8],
-         run[7] * 1024,
-         runtime_no_copies/(run[7] * 1024),
-        run[10]
-        ])
+    runtime_headers = ["# Copies", "Runtime (us)", "Speedup (single/parallel)", "Fidelity"]
+    runtime_results = []
+    for run in results:
+        runtime_no_copies = results[0][7] * 1024
+        runtime_results.append([
+            run[8],
+            run[7] * 1024,
+            runtime_no_copies/(run[7] * 1024),
+            run[10]
+            ])
 
-print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
+    print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
+    runtime_results = []
+    results = []
+
 print("\nCompleted. Exiting...")
