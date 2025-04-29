@@ -1,4 +1,3 @@
-import numpy as np
 import math as m
 from mqt.bench import get_benchmark
 from tabulate import tabulate
