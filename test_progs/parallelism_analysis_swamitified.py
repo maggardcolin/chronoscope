@@ -1,16 +1,19 @@
+import os
+os.system('cls' if os.name == 'nt' else 'clear')
+
 verbose = 1
 if verbose:
-    print()
-    print()
     print("    +----------------------------------------------+")
     print("    |                                              |")
-    print("    |  ++Resource and Fidelity Utility for QAOA++  |")
+    print("    |    Resource and Fidelity Utility for QAOA    |")
     print("    |                                              |")
     print("    |          CS639 FINAL COURSE PROJECT          |")
     print("    |                                              |")
     print("    +----------------------------------------------+")
     print()
-    print("Initializing RFU... ")
+    print("Initializing... ")
+    print()
+    print()
 
 import numpy as np
 import math as m
@@ -309,23 +312,25 @@ benchmark_choice = int(input()) - 1
 if benchmark_choice < 0 or benchmark_choice >= len(benchmark_list):
     print("ERROR: Invalid benchmark choice. Exiting.")
     exit(1)
+os.system('cls' if os.name == 'nt' else 'clear')
 
 benchmark = benchmark_list[benchmark_choice]
 print("You selected: " + benchmark)
 
-test_q_cnt = 5
+#Get the coupling map
+
+
+
+
+
+
+test_q_cnt = 5      #Fixed to 5 do not change 
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
 #print(critical_path_analyzer(test_mark, test_q_cnt, .001, 1, 1000))
 #print(test_mark)
 delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   #
 ctimes = [.1, .1] #ms
-
-large_circuits = ["portfolioqaoa", "portfoliovqe", "qaoa", "vqe"]
-max_qubits = 10
-if benchmark in large_circuits:
-    max_qubits = 11
-    print("WARNING: Large circuit benchmark selected. Running only 1-10 qubits.")
 
 #Example use of the program
 
