@@ -6,8 +6,8 @@ from connectivity_maps import edges_mesh, edges_trapped_ion_5_20, edges_heavy_he
 connectivity_maps = {
     "Mesh": edges_mesh,
     "Trapped Ion 10 10": edges_trapped_ion_10_10,
-    "Trapped Ion 5 20": edges_trapped_ion_5_20,3
-    
+    "Trapped Ion 5 20": edges_trapped_ion_5_20,
+
     "Heavy Hex": edges_heavy_hex
 }
 
