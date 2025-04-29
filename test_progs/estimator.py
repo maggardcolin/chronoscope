@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 verbose = 0
 if verbose:
     print()
@@ -12,10 +11,6 @@ if verbose:
     print("    +-------------------------------------+")
     print()
     print("Initializing RFU... ")
-=======
-print("**Resource and fidelity utility**")
-print("  CS639 FINAL COURSE PROJECT")
->>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 
 import numpy as np
 import math as m
@@ -23,7 +18,6 @@ from mqt.bench import get_benchmark
 from tabulate import tabulate
 from qiskit import transpile
 from qiskit.circuit import QuantumCircuit, Parameter
-<<<<<<< HEAD
 from qiskit_aer import AerSimulator
 
 
@@ -31,11 +25,9 @@ from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel, depolarizing_error
 from qiskit_aer.noise.errors import ReadoutError
 
-=======
 from qiskit import QuantumCircuit
 from qiskit.converters import circuit_to_dag
 from collections import defaultdict
->>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -164,7 +156,6 @@ def critical_path_analyzer(circuit, qubit_count, single_gate_delay, double_gate_
 def make_bidirectional(edges):
     return edges + [(t, s) for (s, t) in edges if (t, s) not in edges]
 
-<<<<<<< HEAD
 def create_noise_model(platform_name):
     fidelity_params = {
         "IonQ_Aria": {"1q": 0.999, "2q": 0.99, "ro": 0.9999},
@@ -180,7 +171,6 @@ def create_noise_model(platform_name):
     noise_model.add_all_qubit_readout_error(readout_error)
     return noise_model
 
-=======
 def calculate_features(circuit: QuantumCircuit, qubit_count: int):
     dag = circuit_to_dag(circuit)
     circuit_depth = circuit.depth()
@@ -255,7 +245,6 @@ def calculate_features(circuit: QuantumCircuit, qubit_count: int):
         "liveness": liveness,
         "measurement": measurement
     }
->>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 
 def collect_benchmark_data_analytical (id, 
                                        benchmark_name, 
@@ -352,23 +341,23 @@ def collect_benchmark_data_analytical (id,
 
     return 0
 
-#noisy simulation for shots estimator
 
+#Depencies completed
 
-
-#START OF ACTUAL PROGRAM
-
+###########################
+# START OF ACTUAL PROGRAM #
+###########################
 if verbose:
     print("Initialized")
     print("Beginning execution...")
-
-
-
+    print()
+    print()
 
 
 
 results = []
 
+#User benchmark selection
 print("Available benchmarks:")
 for i in range(len(benchmark_list)):
     print("  " + str(i+1) + ": " + benchmark_list[i])
@@ -396,16 +385,6 @@ if benchmark in large_circuits:
     print("WARNING: Large circuit benchmark selected. Running only 1-10 qubits.")
 
 #Example use of the program
-<<<<<<< HEAD
-for i in range(1, 2):
-    test_q_cnt = 5*i
-    test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
-    collect_benchmark_data_analytical(
-                                    id = i,                                               #An arbitrary id for use in identifying and ordering tests
-                                    benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
-                                    benchmark = test_mark,                                #the actual benchmark circuit
-                                    benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
-=======
 for i in range(1, max_qubits):
     try:
         test_q_cnt = i
@@ -417,7 +396,6 @@ for i in range(1, max_qubits):
                                         benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
                                         benchmark = test_mark,                                #the actual benchmark circuit
                                         benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
->>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 
                                         connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
                                         connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
@@ -428,16 +406,6 @@ for i in range(1, max_qubits):
                                         fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
                                         coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
 
-<<<<<<< HEAD
-                                    attempt_parallelism=True,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-                                    parallelism_level = 2,                                #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
-
-                                    result=results                                       #The return array to which results are appended
-                                    )
-
-headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity", "TVD"]
-print(tabulate(results, headers=headers, tablefmt="grid"))
-=======
                                         attempt_parallelism=False,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
                                         parallelism_level = -1,                                #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
@@ -452,4 +420,3 @@ print(tabulate(results, headers=headers, tablefmt="grid"))
 
 net_fidelities = [row[-1] for row in results]  # last column of each result row is Net Fidelity
 estimate_shots(net_fidelities)
->>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
