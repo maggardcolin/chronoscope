@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 verbose = 0
 if verbose:
     print()
@@ -11,6 +12,10 @@ if verbose:
     print("    +-------------------------------------+")
     print()
     print("Initializing RFU... ")
+=======
+print("**Resource and fidelity utility**")
+print("  CS639 FINAL COURSE PROJECT")
+>>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 
 import numpy as np
 import math as m
@@ -18,6 +23,7 @@ from mqt.bench import get_benchmark
 from tabulate import tabulate
 from qiskit import transpile
 from qiskit.circuit import QuantumCircuit, Parameter
+<<<<<<< HEAD
 from qiskit_aer import AerSimulator
 
 
@@ -25,15 +31,20 @@ from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel, depolarizing_error
 from qiskit_aer.noise.errors import ReadoutError
 
+=======
+from qiskit import QuantumCircuit
+from qiskit.converters import circuit_to_dag
+from collections import defaultdict
+>>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 from qiskit.transpiler import CouplingMap
 
-benchmark_list = [
-    "ae", "graphstate", "qft", "qnn", "wstate"
-]
+benchmark_list = ["ae", "graphstate", "portfolioqaoa", "portfoliovqe",
+              "qaoa", "qft", "qnn", "vqe", "wstate"]
 
 edges_IBM_27 = [
     (0, 1), (1, 2), (2, 3),
@@ -47,6 +58,41 @@ edges_IBM_27 = [
     (20, 21), (21, 22), (22, 23), (23, 24),
     (21, 25), (23, 26)
 ]
+
+def estimate_shots(net_fidelities):
+    import matplotlib.pyplot as plt
+    import math
+    import numpy as np
+
+    desired_fidelities = np.arange(0.2, 1.2, 0.2)  # [0.2, 0.4, 0.6, 0.8, 1.0]
+
+    fig, axes = plt.subplots(len(desired_fidelities), 1, figsize=(8, 20))
+    fig.tight_layout(pad=5.0)  # spacing between plots
+
+    for idx, desired_fidelity in enumerate(desired_fidelities):
+        ax = axes[idx]
+        print(f"\nDesired Fidelity: {desired_fidelity}")
+        shots = []
+        for i, net_fidelity in enumerate(net_fidelities, 1):  # i = number of qubits
+            shots_needed = math.ceil(desired_fidelity / net_fidelity)
+            if shots_needed < 1:
+                shots_needed = 1
+            shots.append(shots_needed)
+            print(f"  {i} qubits -> {shots_needed} shots needed")
+
+        ax.plot(range(1, len(net_fidelities)+1), shots, marker='o')
+        if idx == len(desired_fidelities) - 1:
+            ax.set_xlabel("Number of Qubits")  # only set xlabel on bottom plot
+        else:
+            ax.set_xticklabels([])  # hide xticklabels for upper plots
+
+        ax.set_ylabel("Shots (log)")
+        ax.set_yscale('log')
+        ax.set_title(f"Target Fidelity: {desired_fidelity:.1f}")
+        ax.grid(True, which="both", linestyle='--')
+
+    plt.show()
+
 
 def make_parallel_copies(circuit, n):
     total_qubits = circuit.num_qubits * n
@@ -118,6 +164,7 @@ def critical_path_analyzer(circuit, qubit_count, single_gate_delay, double_gate_
 def make_bidirectional(edges):
     return edges + [(t, s) for (s, t) in edges if (t, s) not in edges]
 
+<<<<<<< HEAD
 def create_noise_model(platform_name):
     fidelity_params = {
         "IonQ_Aria": {"1q": 0.999, "2q": 0.99, "ro": 0.9999},
@@ -133,6 +180,82 @@ def create_noise_model(platform_name):
     noise_model.add_all_qubit_readout_error(readout_error)
     return noise_model
 
+=======
+def calculate_features(circuit: QuantumCircuit, qubit_count: int):
+    dag = circuit_to_dag(circuit)
+    circuit_depth = circuit.depth()
+
+    # Interaction and gate stats
+    interaction_graph = defaultdict(set)
+    total_gates = 0
+    two_qubit_gates = 0
+    measure_count = 0
+
+    for gate in circuit.data:
+        total_gates += 1
+        if gate.operation.name == 'measure':
+            measure_count += 1
+        qargs = [circuit.qubits.index(q) for q in gate.qubits]
+        if len(qargs) == 2:
+            interaction_graph[qargs[0]].add(qargs[1])
+            interaction_graph[qargs[1]].add(qargs[0])
+            two_qubit_gates += 1
+
+    # Communication feature
+    total_degrees = sum(len(neighbors) for neighbors in interaction_graph.values())
+    max_possible = qubit_count * (qubit_count - 1)
+    communication = (total_degrees / max_possible) * 100 if max_possible > 0 else 0
+
+    # Entanglement
+    entanglement = (two_qubit_gates / total_gates) * 100 if total_gates > 0 else 0
+
+    # Parallelism
+    parallelism = ((total_gates / circuit_depth - 1) / (qubit_count - 1)) * 100 if qubit_count > 1 and circuit_depth > 0 else 0
+
+    # Measurement
+    measurement = (measure_count / circuit_depth) * 100 if circuit_depth > 0 else 0
+
+    # Liveness (layer count may differ from circuit depth)
+    dag_layers = list(dag.layers())
+    actual_layer_count = len(dag_layers)
+    liveness_matrix = [[0 for _ in range(actual_layer_count)] for _ in range(qubit_count)]
+
+    for layer_index, layer in enumerate(dag_layers):
+        gate_nodes = layer['graph'].op_nodes()
+        for node in gate_nodes:
+            for qubit in node.qargs:
+                qid = circuit.qubits.index(qubit)
+                liveness_matrix[qid][layer_index] = 1
+
+    total_active = sum(sum(row) for row in liveness_matrix)
+    liveness = (total_active / (qubit_count * actual_layer_count)) * 100 if actual_layer_count > 0 else 0
+
+    # Critical depth proxy: layer with most 2q gates
+    two_q_depthwise = [0] * actual_layer_count
+    for layer_idx, layer in enumerate(dag_layers):
+        for node in layer['graph'].op_nodes():
+            if len(node.qargs) == 2:
+                two_q_depthwise[layer_idx] += 1
+    max_2q_layer = max(two_q_depthwise, default=0)
+    critical_depth = (max_2q_layer / two_qubit_gates) * 100 if two_qubit_gates > 0 else 0
+
+    # truncate all results to 2 decimal places
+    communication = round(communication, 2)
+    critical_depth = round(critical_depth, 2)
+    entanglement = round(entanglement, 2)
+    parallelism = round(parallelism, 2)
+    liveness = round(liveness, 2)
+    measurement = round(measurement, 2)
+
+    return {
+        "communication": communication,
+        "critical-depth": critical_depth,
+        "entanglement": entanglement,
+        "parallelism": parallelism,
+        "liveness": liveness,
+        "measurement": measurement
+    }
+>>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 
 def collect_benchmark_data_analytical (id, 
                                        benchmark_name, 
@@ -182,8 +305,6 @@ def collect_benchmark_data_analytical (id,
     transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=3)
     num_qubits_transpiled = transpiled_benchmark.num_qubits
     
-    
-    
     swap_overhead = transpiled_benchmark.count_ops().get('swap', 0)
     cx_count = transpiled_benchmark.count_ops().get('cx', 0)
 
@@ -192,9 +313,6 @@ def collect_benchmark_data_analytical (id,
     total_gatecount = 0
     for key in transpiled_benchmark.count_ops():
         total_gatecount += transpiled_benchmark.count_ops()[key]
-        
-
-
 
     #Get the critical path (returns cost of the critical path)
     cost = critical_path_analyzer(transpiled_benchmark, num_qubits_transpiled, delays[0], delays[1], delays[2])
@@ -251,8 +369,19 @@ if verbose:
 
 results = []
 
+print("Available benchmarks:")
+for i in range(len(benchmark_list)):
+    print("  " + str(i+1) + ": " + benchmark_list[i])
+print("Select a benchmark to run (1-" + str(len(benchmark_list)) + "):")
+benchmark_choice = int(input()) - 1
+if benchmark_choice < 0 or benchmark_choice >= len(benchmark_list):
+    print("ERROR: Invalid benchmark choice. Exiting.")
+    exit(1)
+
+benchmark = benchmark_list[benchmark_choice]
+print("You selected: " + benchmark)
+
 test_q_cnt = 5
-benchmark = "ae"
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
 #print(critical_path_analyzer(test_mark, test_q_cnt, .001, 1, 1000))
 #print(test_mark)
@@ -260,8 +389,14 @@ delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   #
 ctimes = [.1, .1] #ms
 
+large_circuits = ["portfolioqaoa", "portfoliovqe", "qaoa", "vqe"]
+max_qubits = 28
+if benchmark in large_circuits:
+    max_qubits = 11
+    print("WARNING: Large circuit benchmark selected. Running only 1-10 qubits.")
 
 #Example use of the program
+<<<<<<< HEAD
 for i in range(1, 2):
     test_q_cnt = 5*i
     test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
@@ -270,16 +405,30 @@ for i in range(1, 2):
                                     benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
                                     benchmark = test_mark,                                #the actual benchmark circuit
                                     benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+=======
+for i in range(1, max_qubits):
+    try:
+        test_q_cnt = i
+        test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
+        print("Benchmark circuit features for num_qubits = " + str(test_q_cnt) + ":")
+        print(calculate_features(test_mark, test_q_cnt))
+        collect_benchmark_data_analytical(
+                                        id = i,                                               #An arbitrary id for use in identifying and ordering tests
+                                        benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                        benchmark = test_mark,                                #the actual benchmark circuit
+                                        benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+>>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
 
-                                    connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
-                                    connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
-                                    force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+                                        connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
+                                        connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
+                                        force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
 
-                                    gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
-                                    delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
-                                    fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
-                                    coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
+                                        gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                        delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                        fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                        coherence_times=ctimes,                                #Coherence timee in form of     [t1, t2] (ms)
 
+<<<<<<< HEAD
                                     attempt_parallelism=True,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
                                     parallelism_level = 2,                                #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
@@ -288,3 +437,19 @@ for i in range(1, 2):
 
 headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity", "TVD"]
 print(tabulate(results, headers=headers, tablefmt="grid"))
+=======
+                                        attempt_parallelism=False,                            #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                        parallelism_level = -1,                                #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+
+                                        result=results                                       #The return array to which results are appended
+                                        )
+    except Exception as e:
+        print(f"Error processing benchmark with {i} qubits: {e}")
+        continue
+        
+headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
+print(tabulate(results, headers=headers, tablefmt="grid"))
+
+net_fidelities = [row[-1] for row in results]  # last column of each result row is Net Fidelity
+estimate_shots(net_fidelities)
+>>>>>>> d03ac217f49c994e415ef7e71958f8e0b88e6deb
