@@ -245,7 +245,7 @@ def collect_benchmark_data_analytical (id,
         benchmark = make_parallel_copies(circuit=benchmark, n=max_possible_copies)  #Store parallel-ed version into 
     
     #Transpile to specified connectivity
-    transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=3)
+    transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=2)
     num_qubits_transpiled = transpiled_benchmark.num_qubits
     
     swap_overhead = transpiled_benchmark.count_ops().get('swap', 0)
@@ -263,19 +263,9 @@ def collect_benchmark_data_analytical (id,
     #Estimate fidelity based on individual gate errors and execution time
     oneqgate_p_circ = (total_gatecount - cx_count - swap_overhead)
     
-    #simulate
-#    sim = AerSimulator(noise_model=create_noise_model("IBM_Montreal"))
-#    _result = sim.run(transpiled_benchmark, shots=128).result()
-#    _counts = _result.get_counts()
-#    _norm_counts = normalize(_counts)
-#    _ideal_key = max(_counts, key=_counts.get)
-#    _ideal_dist = {_ideal_key: 1.0}
-#    _tvd = total_variation_distance(_norm_counts, _ideal_dist)
-
-    
     
     #replace with TVD (?)
-    estimated_average_fidelity = (fidelities[0]**oneqgate_p_circ * fidelities[1]**(cx_count + swap_overhead*3) * fidelities[2]**(benchmark_qubits))**(1/max_possible_copies) * calculate_idling_error(cost, coherence_times[0], coherence_times[1])**(1/max_possible_copies)
+    estimated_average_fidelity = (fidelities[0]**(oneqgate_p_circ/max_possible_copies) * fidelities[1]**((cx_count + swap_overhead*3)/max_possible_copies) * fidelities[2]**(benchmark_qubits)) * calculate_idling_error(cost, coherence_times[0], coherence_times[1])**(benchmark_qubits/max_copies)
 
     result.append([
         id,
@@ -313,7 +303,7 @@ results = []
 
 print("Available benchmarks:")
 for i in range(len(benchmark_list)):
-    print("  " + str(i+1) + ": " + benchmark_list[i])
+    print("  [" + str(i+1) + "] " + benchmark_list[i])
 print("Select a benchmark to run (1-" + str(len(benchmark_list)) + "):")
 benchmark_choice = int(input()) - 1
 if benchmark_choice < 0 or benchmark_choice >= len(benchmark_list):
@@ -338,10 +328,37 @@ if benchmark in large_circuits:
     print("WARNING: Large circuit benchmark selected. Running only 1-10 qubits.")
 
 #Example use of the program
+
+max_copies = 5
 test_number = 1
-for i in range(2, max_qubits):
+
+#Benchmark data for no parallelism 
+collect_benchmark_data_analytical(
+                                        id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
+                                        benchmark_name=benchmark,                             #An arbitrary string (but you should set it to the name of the benchmark)
+                                        benchmark = test_mark,                                #the actual benchmark circuit
+                                        benchmark_qubits=test_q_cnt,                          #Number of qubits in the benchmark circuit
+
+                                        connectivity_map=edges_IBM_27,                        #edge map of the arch we are testing
+                                        connectivity_map_size=27,                             #Maximum number of allowed qubits on the map
+                                        force_bi=1,                                           #????? sometimes necessary to force bidrectionality of coupling  map
+
+                                        gateset=['rz', 'sx', 'x', 'cx', 'measure'],           #Basis gates to use
+                                        delays=delay,                                         #Gate delays in form of         [single, double, readout] (us)
+                                        fidelities= fdlt,                                     #Fidelities in form of          [single, double, readout] (%)
+                                        coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
+
+                                        attempt_parallelism=False,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
+                                        parallelism_level = -1,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+
+                                        result=results                                       #The return array to which results are appended
+                                        )
+
+test_number = test_number + 1
+
+for i in range(2, max_copies + 1):
     try:
-        test_q_cnt = i
+        test_q_cnt = 5
         test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
         #print("Benchmark circuit features for num_qubits = " + str(test_q_cnt) + ":")
         #print(calculate_features(test_mark, test_q_cnt))
@@ -361,7 +378,7 @@ for i in range(2, max_qubits):
                                         coherence_times=ctimes,                               #Coherence timee in form of     [t1, t2] (ms)
 
                                         attempt_parallelism=True,                             #Set 'True' to attempt adding copies to the circuit (will maximize number of copies)
-                                        parallelism_level = -1,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
+                                        parallelism_level = i,                               #-1 is maximum copies otherwise specify number of copies (0 copies not allowed) Only used when attempt_parallelism is true
 
                                         result=results                                       #The return array to which results are appended
                                         )
@@ -374,4 +391,22 @@ headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?"
 print(tabulate(results, headers=headers, tablefmt="grid"))
 
 net_fidelities = [row[-1] for row in results]  # last column of each result row is Net Fidelity
-estimate_shots(net_fidelities)
+print("Analytical values calulated...")
+print()
+print("Calculating runtime for 1024 shots...")
+print()
+
+runtime_headers = ["# Copies", "Runtime (us)", "Speedup (single/parallel)", "Fidelity"]
+runtime_results = []
+for run in results:
+    runtime_no_copies = results[0][7] * 1024
+    runtime_results.append([
+         run[8],
+         run[7] * 1024,
+         runtime_no_copies/(run[7] * 1024),
+        run[10]
+        ])
+
+print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
+print()
+print("Completed. Exiting...")
