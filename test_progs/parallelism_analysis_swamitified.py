@@ -25,7 +25,7 @@ from qiskit.converters import circuit_to_dag
 print(".", end = '', flush=True)
 from collections import defaultdict
 import warnings
-from connectivity_maps import edges_mesh, edges_trapped_ion, edges_heavy_hex
+from connectivity_maps import edges_mesh, edges_trapped_ion_5_20, edges_heavy_hex, edges_trapped_ion_10_10  
 print(".", end = '', flush=True)
 from qiskit.transpiler import CouplingMap
 import connectivity_maps as cn
@@ -309,7 +309,7 @@ max_copies = int(100/test_q_cnt)    #truncate
 print("QAOA problem size is " + str(test_q_cnt) + " qubits running 1 - " + str(max_copies) + " circuits in parallel.")
 
 test_number = 1
-connectivity_maps = [edges_mesh, edges_trapped_ion, edges_heavy_hex]
+connectivity_maps = [edges_mesh, edges_trapped_ion_10_10, edges_heavy_hex, edges_trapped_ion_5_20]
 connectivity_maps_ascii = ["Mesh", "Trapped Ion", "Heavy Hex"]
 ascii_index = 0
 for connectivity_map in connectivity_maps:
