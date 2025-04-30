@@ -31,7 +31,8 @@ import connectivity_maps as cn
 print(".", end = '', flush=True)
 from datetime import datetime
 
-fname = str(datetime.now())[:9] + str(datetime.now())[11:12]+ '.log'
+#print a log
+fname = "logs/" +str(datetime.now())[:10] + '-' + str(datetime.now())[11:13]+ '-' + str(datetime.now())[14:16] + ".log"
 
 #fname = "execute.log"
 
@@ -163,7 +164,7 @@ def collect_benchmark_data_analytical (id,
     
     for k in range(num_to_average):
         #Transpile to specified connectivity
-        transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=0)
+        transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=1)
         num_qubits_transpiled = transpiled_benchmark.num_qubits
         
         swap_overhead += transpiled_benchmark.count_ops().get('swap', 0)
@@ -181,7 +182,7 @@ def collect_benchmark_data_analytical (id,
     oneqgate_p_circ = (total_gatecount - cx_count - swap_overhead)
     
     cx_count = np.ceil(cx_count/num_to_average)
-    swap_overhead = swap_overhead/num_to_average
+    swap_overhead = np.ceil(swap_overhead/num_to_average)
     transpiled_depth = transpiled_depth/num_to_average
     total_gatecount = total_gatecount/num_to_average
     cost = cost/num_to_average
@@ -205,17 +206,17 @@ def collect_benchmark_data_analytical (id,
 
     return 0
 
-#noisy simulation for shots estimator
-
 #num copies affect speedup time                         (INCOMPLETE)
 #   Ratio of original time over speedup time
+#   Add plotting function
 
-#As we change connectivity maps how does speedup change (INCOMPLETE)
+#As we change connectivity maps how does speedup change (COMPLETE)
 #   Specifically make sure to do a trapped ion config 
 #   (groups of 5 or so qubits with limited extracell 
 #   connectivity)
 
-#What compilation settings to use to optimize these     (INCOMPLETE)
+#What compilation settings to use to optimize these     (COMPLETE)
+#   Just let the compiler do its job
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -236,7 +237,7 @@ results = []
 
 benchmark = "qaoa"
 
-test_q_cnt = 5      #Fixed to 5 do not change 
+test_q_cnt = 5      ######################################################################################################
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
 delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   # %
@@ -329,8 +330,8 @@ for connectivity_map in connectivity_maps:
         runtime_no_copies = results[0][7] * 1024
         runtime_results.append([
             run[8],
-            run[7] * 1024,
-            runtime_no_copies/(run[7] * 1024),
+            run[5] * np.ceil(1024/run[8]),
+            runtime_no_copies/(run[5] * np.ceil(1024/run[8])),
             run[10]
             ])
         
@@ -339,6 +340,9 @@ for connectivity_map in connectivity_maps:
     runtime_results = []
     results = []
 
-print("\nCompleted. Exiting...")
 f.flush()
 f.close()
+print("A log has been generated at " + fname)
+
+print("\nCompleted. Exiting...")
+
