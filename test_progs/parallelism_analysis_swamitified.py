@@ -1,7 +1,7 @@
 import os
 os.system('cls' if os.name == 'nt' else 'clear')
 
-verbose = 1
+verbose = 0
 print("    +----------------------------------------------+")
 print("    |    Resource and Fidelity Utility for QAOA    |")
 print("    |                                              |")
@@ -31,9 +31,9 @@ import connectivity_maps as cn
 print(".", end = '', flush=True)
 from datetime import datetime
 
-#fname = 'logs/' + str(datetime.now())[:9] + str(datetime.now())[11:14]+ '.log'
+fname = str(datetime.now())[:9] + str(datetime.now())[11:12]+ '.log'
 
-fname = "execute.log"
+#fname = "execute.log"
 
 f = open(fname, 'w')
 print("    +----------------------------------------------+", file=f)
@@ -159,11 +159,11 @@ def collect_benchmark_data_analytical (id,
     total_gatecount = 0
     cost = 0
     
-    num_to_average = 10
+    num_to_average = 3
     
     for k in range(num_to_average):
         #Transpile to specified connectivity
-        transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=3)
+        transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=0)
         num_qubits_transpiled = transpiled_benchmark.num_qubits
         
         swap_overhead += transpiled_benchmark.count_ops().get('swap', 0)
@@ -255,7 +255,10 @@ connectivity_maps_ascii = ["Mesh (100 qubit)", "Trapped Ion (10 qubit clusters)"
 ascii_index = 0
 for connectivity_map in connectivity_maps:
     print()
+    print('', file = f)
     print()
+    print('', file = f)
+    print(connectivity_maps_ascii[ascii_index], file = f)
     print(connectivity_maps_ascii[ascii_index])
     ascii_index = ascii_index + 1
     #Benchmark data for no parallelism 
@@ -337,5 +340,5 @@ for connectivity_map in connectivity_maps:
     results = []
 
 print("\nCompleted. Exiting...")
-
+f.flush()
 f.close()
