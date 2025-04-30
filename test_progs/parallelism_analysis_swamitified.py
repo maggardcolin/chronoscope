@@ -2,14 +2,13 @@ import os
 os.system('cls' if os.name == 'nt' else 'clear')
 
 verbose = 1
-if verbose:
-    print("    +----------------------------------------------+")
-    print("    |    Resource and Fidelity Utility for QAOA    |")
-    print("    |                                              |")
-    print("    |          CS639 FINAL COURSE PROJECT          |")
-    print("    +----------------------------------------------+")
-    print()
-    print("Initializing...", end='', flush=True)
+print("    +----------------------------------------------+")
+print("    |    Resource and Fidelity Utility for QAOA    |")
+print("    |                                              |")
+print("    |          CS639 FINAL COURSE PROJECT          |")
+print("    +----------------------------------------------+")
+print()
+print("Initializing...", end='', flush=True)
 
 import numpy as np
 import math as m
@@ -309,8 +308,8 @@ max_copies = int(100/test_q_cnt)    #truncate
 print("QAOA problem size is " + str(test_q_cnt) + " qubits running 1 - " + str(max_copies) + " circuits in parallel.")
 
 test_number = 1
-connectivity_maps = [edges_mesh, edges_trapped_ion_10_10, edges_heavy_hex, edges_trapped_ion_5_20]
-connectivity_maps_ascii = ["Mesh", "Trapped Ion", "Heavy Hex"]
+connectivity_maps = [edges_mesh, edges_trapped_ion_10_10, edges_trapped_ion_5_20]
+connectivity_maps_ascii = ["Mesh (100 qubit)", "Trapped Ion (10 qubit clusters)", "Trapped Ion (5 qubit clusters)"]
 ascii_index = 0
 for connectivity_map in connectivity_maps:
     print()
@@ -371,7 +370,8 @@ for connectivity_map in connectivity_maps:
             continue
             
     headers = ["ID", "Bnchmrk", "# Qubit", "# Gate", "Depth", "Cost (us)", "Prllsm?", "Copy Cost (us)", "# Prlll cps", "SWAP ovhd", "Net Fidelity"]
-    print(tabulate(results, headers=headers, tablefmt="grid"))
+    if verbose:
+        print(tabulate(results, headers=headers, tablefmt="grid"))
 
     #print(f"Analytical values calulated for connectivity {connectivity_map}...\n")
     print("Calculating runtime for 1024 shots...\n")
