@@ -2,6 +2,4 @@
 .vscode
 ./.vscode
 ./.vscode/*
-logs/.
-*.log
-logs/*.log
+/logs/*.log

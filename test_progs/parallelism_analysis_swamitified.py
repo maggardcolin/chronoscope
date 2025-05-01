@@ -10,6 +10,9 @@ print("    +----------------------------------------------+")
 print()
 print("Initializing...", end='', flush=True)
 
+
+#These print statements are just to give an indicator of how far along the loading process we are
+# not functional and probably slow things down but they're neat
 import numpy as np
 import math as m
 print(".", end = '', flush=True)
@@ -30,9 +33,14 @@ from qiskit.transpiler import CouplingMap
 import connectivity_maps as cn
 print(".", end = '', flush=True)
 from datetime import datetime
+import matplotlib.pyplot as plt
+
+benchmark = "ae"
+
+test_q_cnt = 7      ######################################################################################################
 
 #print a log
-fname = "logs/" +str(datetime.now())[:10] + '-' + str(datetime.now())[11:13]+ '-' + str(datetime.now())[14:16] + ".log"
+fname = "logs/" +str(datetime.now())[:10] + '-' + str(datetime.now())[11:13]+ '-' + str(datetime.now())[14:16] + "-" + benchmark + "-" + str(test_q_cnt) +"-qubit"+ ".log"
 
 #fname = "execute.log"
 
@@ -235,9 +243,7 @@ print("    +----------------------------------------------+")
 print()
 results = []
 
-benchmark = "qaoa"
 
-test_q_cnt = 5      ######################################################################################################
 test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
 delay = [0.02, .2, 200]        #us
 fdlt = [0.999, .985, .97]   # %
@@ -261,7 +267,6 @@ for connectivity_map in connectivity_maps:
     print('', file = f)
     print(connectivity_maps_ascii[ascii_index], file = f)
     print(connectivity_maps_ascii[ascii_index])
-    ascii_index = ascii_index + 1
     #Benchmark data for no parallelism 
     collect_benchmark_data_analytical(
                                             id = test_number,                                               #An arbitrary id for use in identifying and ordering tests
@@ -337,11 +342,57 @@ for connectivity_map in connectivity_maps:
         
     print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
     print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"), file=f)
-    runtime_results = []
-    results = []
+    ascii_index = ascii_index + 1
 
+
+##Chat GPT stuff below
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import itertools
+
+# Split runtime_results into architecture blocks
+architecture_names = connectivity_maps_ascii
+grouped_runtime_results = []
+cursor = 0
+
+# Calculate how many runs belong to each architecture
+runs_per_architecture = [1 + max_copies - 1 for _ in architecture_names]  # 1 no-parallel + (max_copies - 1) parallel runs
+
+for count in runs_per_architecture:
+    arch_block = runtime_results[cursor:cursor + count]
+    grouped_runtime_results.append(arch_block)
+    cursor += count
+
+# Set up distinct colors
+colors = itertools.cycle(plt.rcParams['axes.prop_cycle'].by_key()['color'])
+
+# Plot all architectures on one figure
+plt.figure()
+for i, arch_runtime in enumerate(grouped_runtime_results):
+    if not arch_runtime:
+        continue  # skip empty blocks
+    copies = [row[0] for row in arch_runtime]
+    speedup = [row[2] for row in arch_runtime]
+    plt.plot(copies, speedup, marker='o', linestyle='-', label=architecture_names[i], color=next(colors))
+
+pltname = "Parallelism Speedup (" + benchmark + " " + str(test_q_cnt) + " qubit)"
+plt.xlabel("# Copies")
+plt.ylabel("Speedup")
+plt.title(pltname)
+plt.xticks(sorted(set(row[0] for arch in grouped_runtime_results for row in arch)))
+plt.grid(True)
+plt.legend()
+ax = plt.gca()
+ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+plt.savefig('plots/' + benchmark + '/' + str(test_q_cnt) + '.png', dpi=300, bbox_inches='tight')
+#plt.show()
+    
+    
+print("Analysis done.", file=f)
 f.flush()
 f.close()
+print()
+print()
 print("A log has been generated at " + fname)
 
 print("\nCompleted. Exiting...")
