@@ -46,10 +46,6 @@ for runcount in range(5,21):
     test_q_cnt = runcount                 #Number qubits for benchmark circuit
 
 
-
-
-
-
     #print a log
     fname = "logs/" +str(datetime.now())[:10] + '-' + str(datetime.now())[11:13]+ '-' + str(datetime.now())[14:16] + "-" + benchmark + "-" + str(test_q_cnt) +"-qubit"+ ".log"
 
@@ -57,7 +53,7 @@ for runcount in range(5,21):
 
     f = open(fname, 'w')
     print("    +----------------------------------------------+", file=f)
-    print("    |    Resource and Fidelity Utility for QAOA    |", file=f)
+    print("    |   CHRONOSCOPE: Quantum Resource Estimation   |", file=f)
     print("    |                                              |", file=f)
     print("    |          CS639 FINAL COURSE PROJECT          |", file=f)
     print("    +----------------------------------------------+", file=f)
@@ -212,6 +208,8 @@ for runcount in range(5,21):
         #replace with TVD (?)
         estimated_average_fidelity = (fidelities[0]**(oneqgate_p_circ/max_possible_copies) * fidelities[1]**((cx_count + swap_overhead*3)/max_possible_copies) * fidelities[2]**(benchmark_qubits)) * calculate_idling_error(cost, coherence_times[0], coherence_times[1])**(benchmark_qubits/max_copies)
 
+        best_cost += delay[2]
+
         result.append([
             id,
             benchmark_name,
@@ -274,7 +272,7 @@ for runcount in range(5,21):
 
 
     test_mark = get_benchmark(benchmark_name=benchmark, level=2, circuit_size=test_q_cnt)
-    delay = [0.02, .2, 200]        #us
+    delay = [10, 100, 1000]        #us
     fdlt = [0.999, .985, .97]   # %
     ctimes = [.1, .1] #ms
 
@@ -289,6 +287,7 @@ for runcount in range(5,21):
     connectivity_maps = [edges_mesh, edges_trapped_ion_10_10, edges_trapped_ion_5_20]
     connectivity_maps_ascii = ["Mesh (100 qubit)", "Trapped Ion (10 qubit clusters)", "Trapped Ion (5 qubit clusters)"]
     ascii_index = 0
+    all_runtime_results = []
     for connectivity_map in connectivity_maps:
         print()
         print('', file = f)
@@ -372,9 +371,12 @@ for runcount in range(5,21):
                 ])
             
         results_single = []
+        ascii_index += 1
             
         print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"))
         print(tabulate(runtime_results, headers=runtime_headers, tablefmt="grid"), file=f)
+        all_runtime_results.extend(runtime_results)
+
         
 
     ##Chat GPT stuff below
@@ -386,6 +388,7 @@ for runcount in range(5,21):
     architecture_names = connectivity_maps_ascii
     grouped_runtime_results = []
     cursor = 0
+    runtime_results = all_runtime_results
 
     # Calculate how many runs belong to each architecture
     runs_per_architecture = [1 + max_copies - 1 for _ in architecture_names]  # 1 no-parallel + (max_copies - 1) parallel runs
