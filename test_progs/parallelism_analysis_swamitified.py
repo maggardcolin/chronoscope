@@ -38,10 +38,10 @@ import matplotlib.pyplot as plt
 
 
 #Edit run parameters here
-benchmark = "qft"              #Benchmark to run
+benchmark = "qaoa"              #Benchmark to run
 
 #Autorunner - to run a specific qubit count, change range upper and lower to the qubit count you want to test
-for runcount in range(5,21):
+for runcount in range(5,31):
 
     test_q_cnt = runcount                 #Number qubits for benchmark circuit
 
@@ -95,9 +95,12 @@ for runcount in range(5,21):
             if len(qubit_indices) > 1:                  #Case 2 qubit gate
                 #equalize counts between the 2 qubits to max of the two (both single and double)
                 #Then add one double to each
-                
+                modifier = 1
+                if inst.name == 'swap':
+                    modifier = 3
+                    
                 for qi in qubit_indices:
-                    counts[qi][1] += 1
+                    counts[qi][1] += 1 * modifier
                     counts[qi][2] =  counts[qi][0] * single_gate_delay + counts[qi][1] * double_gate_delay
 
                 if counts[qubit_indices[0]][2] > counts[qubit_indices[1]][2]:
@@ -181,7 +184,7 @@ for runcount in range(5,21):
 
         for k in range(num_to_average):
             #Transpile to specified connectivity
-            transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=1)
+            transpiled_benchmark = transpile(benchmark, coupling_map=local_coupling_map, optimization_level=3)
             num_qubits_transpiled = transpiled_benchmark.num_qubits
             
             swap_overhead += transpiled_benchmark.count_ops().get('swap', 0)
@@ -240,7 +243,7 @@ for runcount in range(5,21):
 
         return 0
 
-    #num copies affect speedup time                         (INCOMPLETE)
+    #num copies affect speedup time                         (COMPLETE)
     #   Ratio of original time over speedup time
     #   Add plotting function
 
